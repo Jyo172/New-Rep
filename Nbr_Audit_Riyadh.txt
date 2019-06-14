@@ -1,0 +1,336 @@
+import openpyxl
+
+wb = openpyxl.load_workbook('CDDri.xlsx')
+
+
+def conca(tech):
+    ws = wb[tech]
+    temp = []
+    row_count = ws.max_row
+    for i in range(2, row_count + 1):
+        ws.cell(row=i, column=5).value = ws.cell(row=i, column=1).value + "_" + ws.cell(row=i, column=3).value
+        temp.append(ws.cell(row=i, column=1).value + "_" + ws.cell(row=i, column=3).value)
+    return temp
+
+
+def rel(key_wrd):
+    file = open('relations.txt')
+    line = file.readlines()
+    rela = []
+    for x in line:
+        if key_wrd in x:
+            r = x.split()
+            if len(r[2]) == 7:
+                y = x.split('=')
+                src = y[1].split(',')
+                z = src[0] + "_" + r[2]
+                rela.append(z)
+            else:
+                rela.append(r[2])
+    return rela
+
+
+def str_chk(rela, inp, strL):
+    source = []
+    target = []
+    for t in rela:
+        r = t.split('_')
+        source.append(r[0])
+        target.append(r[1])
+    #print(rela)
+    #print(source)
+    #print(target)
+    wb.create_sheet('strategy error_{}'.format(inp))
+    ws4 = wb['strategy error_{}'.format(inp)]
+    relcdd_format = []
+    l = len(rela)
+    m = ws4.max_row
+    for i in range(0,l):
+        fs = source[i][:1]
+        ls = source[i][:5:-1]
+        ft = target[i][:1]
+        lt = target[i][:5:-1]
+        relcdd_format.append(fs+ls+ft+lt)
+
+    for j in range(0, l):
+        if source[j].startswith('H') and target[j].startswith('G'):
+            if relcdd_format[j] in strL:
+                continue
+            else:
+                ws4.cell(row=m, column=1).value = rela[j]
+                m += 1
+        else:
+            continue
+
+
+def missing_nbr(tech, L):
+    mn = []
+    ws1 = wb[tech]
+    rc = ws1.max_row
+    for k in range(1, rc + 1):
+        if ws1.cell(row=k, column=5).value in L:
+            continue
+        else:
+            mn.append(ws1.cell(row=k, column=5).value)
+
+    wb.create_sheet('missing nbr_{}'.format(tech))
+    ws3 = wb['missing nbr_{}'.format(tech)]
+    ln = len(mn)
+    for i in range(2, ln + 1):
+        ws3.cell(row=i, column=1).value = mn[i - 1]
+    if tech == 'GSM':
+        for i in range(2, ln + 1):
+            ws3.cell(row=i, column=2).value = mn[i - 1][:6]
+            ws3.cell(row=i, column=3).value = mn[i - 1][8:]
+            for m in mn:
+                if m == ws1.cell(row=i, column=5).value:
+                    ws3.cell(row=i, column=4).value = ws1.cell(row=i, column=4).value
+
+    wb.save('CDDri.xlsx')
+
+
+def twowayj():
+    ws1 = wb['Utran']
+    rc = ws1.max_row
+    H = []
+    Rnc_H = []
+    t1 = []
+    Rnc_t1 = []
+    G = []
+    Rnc_G = []
+    t2 = []
+    Rnc_t2 = []
+    for j in range(2, rc + 1):
+        v = ws1.cell(row=j, column=3).value
+        if v.startswith('H'):
+            H.append(v)
+            Rnc_H.append(ws1.cell(row=j, column=4).value)
+            t1.append(ws1.cell(row=j, column=1).value)
+            Rnc_t1.append(ws1.cell(row=j, column=2).value)
+        else:
+            G.append(v)
+            Rnc_G.append(ws1.cell(row=j, column=4).value)
+            t2.append(ws1.cell(row=j, column=1).value)
+            Rnc_t2.append(ws1.cell(row=j, column=2).value)
+
+    lh = len(H)
+    lg = len(G)
+    for u in range(1, lh):
+        ws1.cell(row=rc + u, column=1).value = H[u]
+        ws1.cell(row=rc + u, column=2).value = Rnc_H[u]
+        ws1.cell(row=rc + u, column=3).value = t1[u]
+        ws1.cell(row=rc + u, column=4).value = Rnc_t1[u]
+    rc2 = ws1.max_row
+    for v in range(1, lg):
+        ws1.cell(row=rc2 + v, column=1).value = G[v]
+        ws1.cell(row=rc2 + v, column=2).value = Rnc_G[v]
+        ws1.cell(row=rc2 + v, column=3).value = t2[v]
+        ws1.cell(row=rc2 + v, column=4).value = Rnc_t2[v]
+    wb.save('CDDri.xlsx')
+
+
+def twowayr(rela):
+    ws1 = wb['Utran']
+    source = []
+    srctw = []
+    tartw = []
+    target = []
+    for t in rela:
+        r = t.split('_')
+        source.append(r[0])
+        target.append(r[1])
+    l = len(rela)
+
+    for i in range(0, l):
+        if source[i].startswith('H') and target[i].startswith('H'):
+            srctw.append(target[i])
+            tartw.append(source[i])
+        elif source[i].startswith('H') and target[i].startswith('G'):
+            if target[i].endswith('E') or target[i].endswith('F') or target[i].endswith('G'):
+                srctw.append(target[i])
+                if source[i].endswith('A'):  #GconstHchange
+                    tartw.append(source[i][:5] + 'E')
+                elif source[i].endswith('B'):
+                    tartw.append(source[i][:5] + 'F')
+                elif source[i].endswith('C'):
+                    tartw.append(source[i][:5] + 'G')
+                elif source[i].endswith('D'):
+                    tartw.append(source[i][:5] + 'H')
+
+                if target[i].endswith('E'):  #HconstGchange
+                    srctw.append(target[i][:5] + 'A')
+                    tartw.append(source[i])
+                    srctw.append(target[i][:5] + 'I')
+                    tartw.append(source[i])
+                elif target[i].endswith('F'):
+                    srctw.append(target[i][:5] + 'B')
+                    tartw.append(source[i])
+                    srctw.append(target[i][:5] + 'J')
+                    tartw.append(source[i])
+                elif target[i].endswith('G'):
+                    srctw.append(target[i][:5] + 'C')
+                    tartw.append(source[i])
+                    srctw.append(target[i][:5] + 'K')
+                    tartw.append(source[i])
+            elif target[i].endswith('M') or target[i].endswith('N') or target[i].endswith('O'):
+                srctw.append(target[i])  #nochange
+                tartw.append(source[i])
+                if source[i].endswith('E'):  #HGchange
+                    if target[i].endswith('M'):
+                        srctw.append(target[i][:5] + 'A')
+                        tartw.append(source[i][:5] + 'A')
+                        srctw.append(target[i][:5] + 'I')
+                        tartw.append(source[i][:5] + 'A')
+                    if target[i].endswith('N'):
+                        srctw.append(target[i][:5] + 'B')
+                        tartw.append(source[i][:5] + 'A')
+                        srctw.append(target[i][:5] + 'J')
+                        tartw.append(source[i][:5] + 'A')
+                    if target[i].endswith('O'):
+                        srctw.append(target[i][:5] + 'C')
+                        tartw.append(source[i][:5] + 'A')
+                        srctw.append(target[i][:5] + 'K')
+                        tartw.append(source[i][:5] + 'A')
+                elif source[i].endswith('F'):
+                    if target[i].endswith('M'):
+                        srctw.append(target[i][:5] + 'A')
+                        tartw.append(source[i][:5] + 'B')
+                        srctw.append(target[i][:5] + 'I')
+                        tartw.append(source[i][:5] + 'B')
+                    if target[i].endswith('N'):
+                        srctw.append(target[i][:5] + 'B')
+                        tartw.append(source[i][:5] + 'B')
+                        srctw.append(target[i][:5] + 'J')
+                        tartw.append(source[i][:5] + 'B')
+                    if target[i].endswith('O'):
+                        srctw.append(target[i][:5] + 'C')
+                        tartw.append(source[i][:5] + 'B')
+                        srctw.append(target[i][:5] + 'K')
+                        tartw.append(source[i][:5] + 'B')
+                elif source[i].endswith('G'):
+                    if target[i].endswith('M'):
+                        srctw.append(target[i][:5] + 'A')
+                        tartw.append(source[i][:5] + 'C')
+                        srctw.append(target[i][:5] + 'I')
+                        tartw.append(source[i][:5] + 'C')
+                    if target[i].endswith('N'):
+                        srctw.append(target[i][:5] + 'B')
+                        tartw.append(source[i][:5] + 'C')
+                        srctw.append(target[i][:5] + 'J')
+                        tartw.append(source[i][:5] + 'C')
+                    if target[i].endswith('O'):
+                        srctw.append(target[i][:5] + 'C')
+                        tartw.append(source[i][:5] + 'C')
+                        srctw.append(target[i][:5] + 'K')
+                        tartw.append(source[i][:5] + 'C')
+                elif source[i].endswith('H'):
+                    if target[i].endswith('M'):
+                        srctw.append(target[i][:5] + 'A')
+                        tartw.append(source[i][:5] + 'D')
+                        srctw.append(target[i][:5] + 'I')
+                        tartw.append(source[i][:5] + 'D')
+                    if target[i].endswith('N'):
+                        srctw.append(target[i][:5] + 'B')
+                        tartw.append(source[i][:5] + 'D')
+                        srctw.append(target[i][:5] + 'J')
+                        tartw.append(source[i][:5] + 'D')
+                    if target[i].endswith('O'):
+                        srctw.append(target[i][:5] + 'C')
+                        tartw.append(source[i][:5] + 'D')
+                        srctw.append(target[i][:5] + 'K')
+                        tartw.append(source[i][:5] + 'D')
+    rc = ws1.max_row
+    for u in range(1, rc):
+        ws1.cell(row=rc + u, column=1).value = srctw[u - 1]
+        ws1.cell(row=rc + u, column=3).value = tartw[u - 1]
+        ws1.cell(row=rc + u, column=5).value = srctw[u - 1] + "_" + tartw[u - 1]
+    wb.save('CDDri.xlsx')
+
+def rnc_cntr(interlist, intralist):
+    file1 = open('RNC_Utrancell.txt')
+    ws = wb['missing nbr_Utran']
+    rc = ws.max_row
+    lst = []
+    line = file1.readlines()
+    for i in range(2, rc+1):
+        for x in line:
+            r = ws.cell(row=i, column=1).value.split("_")
+            ws.cell(row=i, column=2).value = r[0]
+            ws.cell(row=i, column=4).value = r[1]
+            if r[0] in x:
+                r1 = x.split('=')
+                ws.cell(row=i, column=3).value = r1[1][:5]
+            elif r[1] in x:
+                r1 = x.split('=')
+                ws.cell(row=i, column=5).value = r1[1][:5]
+    file2 = open('cntr.txt')
+    line2 = file2.readlines()
+    for j in range(2, rc+1):
+        fs = ws.cell(row=j, column=2).value[:1]
+        ls = ws.cell(row=j, column=2).value[:5:-1]
+        ft = ws.cell(row=j, column=4).value[:1]
+        lt = ws.cell(row=j, column=4).value[:5:-1]
+        lst.append(fs + ls + ft + lt)
+    le = len(lst)
+    for k in range(0, le):
+        for y in line2:
+            r2 = y.split(' ')
+            if ws.cell(row=k+2, column=2).value in y and r2[39] == 'intraFreqRelCntr':
+                ws.cell(row=k+2, column=6).value = r2[41]
+            elif ws.cell(row=k+2, column=2).value in y and r2[39] == 'interFreqRelCntr':
+                ws.cell(row=k+2, column=7).value = r2[41]
+            elif ws.cell(row=k+2, column=2).value in y and r2[39] == 'gsmRelHoAndCellReselCntr':
+                ws.cell(row=k+2, column=8).value = r2[40]
+            else:
+                continue
+        if lst[k] in intralist:
+            ws.cell(row=k+2, column=9).value = 'intra'
+        else:
+            ws.cell(row=k+2, column=9).value = 'inter'
+    wb.save('CDDri.xlsx')
+
+
+gsm_rel = rel('GsmRelationId')
+utran_rel = rel('UtranRelationId')  #CRT data
+strategy = ['HAGE','HBGE','HCGE','HDGE','HAGF','HBGF','HCGF','HDGF','HAGG','HBGG','HCGG','HDGG','HEGM','HFGM','HGGM','HHGM','HEGN','HFGN','HGGN','HHGN','HEGO','HFGO','HGGO','HHGO','GAHA','GBHA','GCHA','GIHA','GJHA','GKHA','GAHB','GBHB','GCHB','GIHB','GJHB','GKHB','GAHC','GBHC','GCHC','GIHC','GJHC','GKHC','GAHD','GBHD','GCHD','GIHD','GJHD','GKHD','GEHE','GFHE','GGHE','GMHE','GNHE','GOHE','GEHF','GFHF','GGHF','GMHF','GNHF','GOHF','GEHG','GFHG','GGHG','GMHG','GNHG','GOHG','GEHH','GFHH','GGHH','GMHH','GNHH','GOHH']
+
+wb.create_sheet('crt_gsm')
+ws = wb['crt_gsm']
+l = len(gsm_rel)
+for i in range(1, l + 1):
+    ws.cell(row=i, column=1).value = gsm_rel[i - 1]
+
+wb.create_sheet('crt_utran')
+ws = wb['crt_utran']
+l = len(utran_rel)
+for i in range(1, l + 1):
+    ws.cell(row=i, column=1).value = utran_rel[i - 1]
+
+ch = input('do you want two way relations also? (y/n)')
+gsm_cdd = conca('GSM')
+missing_nbr('GSM', gsm_rel)
+utran_cdd = conca('Utran')  #CDD data
+if ch == 'y':
+    twowayr(utran_cdd)
+
+missing_nbr('Utran', utran_rel)
+
+str_chk(utran_cdd, 'cdd', strategy)
+str_chk(utran_rel, 'crt', strategy)
+
+intralist = ['HHHH','HGHH','HFHH','HEHH','HHHG','HGHG','HFHG','HEHG','HHHF','HGHF','HFHF','HEHF','HHHE','HGHE','HFHE','HEHE','HDHD','HCHD','HBHD','HAHD','HDHC','HCHC','HBHC','HAHC','HDHB','HCHB','HBHB','HAHB','HDHA','HCHA','HBHA','HAHA']
+interlist = ['GAHA','GBHA','GCHA','GIHA','GJHA','GKHA','GAHB','GBHB','GCHB','GIHB','GJHB','GKHB','GAHC','GBHC','GCHC','GIHC','GJHC','GKHC','GAHD','GBHD','GCHD','GIHD','GJHD','GKHD','GEHE','GFHE','GGHE','GMHE','GNHE','GOHE','GEHF','GFHF','GGHF','GMHF','GNHF','GOHF','GEHG','GFHG','GGHG','GMHG','GNHG','GOHG','GEHH','GFHH','GGHH','GMHH','GNHH','GOHH','HAGE','HBGE','HCGE','HDGE','HAGF','HBGF','HCGF','HDGF','HAGG','HBGG','HCGG','HDGG','HEGM','HFGM','HGGM','HHGM','HEGN','HFGN','HGGN','HHGN','HEGO','HFGO','HGGO','HHGO','HAHE','HBHE','HCHE','HDHE','HAHF','HBHF','HCHF','HDHF','HAHG','HBHG','HCHG','HDHG','HAHH','HBHH','HCHH','HDHH','HEHA','HFHA','HGHA','HHHA','HEHB','HFHB','HGHB','HHHB','HEHC','HFHC','HGHC','HHHC','HEHD','HFHD','HGHD','HHHD']
+rnc_cntr(interlist, intralist)
+ws1 = wb['missing nbr_Utran']
+ws1.cell(row=1, column=1).value = 'Missing Relation'
+ws1.cell(row=1, column=2).value = 'Source Cell'
+ws1.cell(row=1, column=3).value = 'Source RNC'
+ws1.cell(row=1, column=4).value = 'Target Cell'
+ws1.cell(row=1, column=5).value = 'Target RNC'
+ws1.cell(row=1, column=6).value = 'Intra count'
+ws1.cell(row=1, column=7).value = 'Inter count'
+ws1.cell(row=1, column=8).value = 'Gsm count'
+ws1.cell(row=1, column=9).value = 'Missing relation - intra/inter'
+print('Nbr audit done')
+
+wb.save('CDDri.xlsx')
